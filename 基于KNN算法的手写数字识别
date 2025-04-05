@@ -1,1 +1,100 @@
+#include<filesystem>
+#include<iostream>
+#include<vector>
+#include<string>
+#include<algorithm>
+#include"CDib.h"
+
+using namespace std;
+
+struct NUMBER {
+	double similarity;
+	int category;
+};
+
+bool compareBySimilarity(const NUMBER& obj1, const NUMBER& obj2) {
+	return obj1.similarity < obj2.similarity;  //降序排序
+}
+
+vector<vector<vector<double>>>dataset(string path, int N)
+{
+	vector<vector<vector<double>>>sample(10);
+	int id = 0;  //表示读取0~9中哪个数字的目录
+	for (auto& i : filesystem::directory_iterator(""))
+	{
+		int count = 0;
+		for (auto& j : filesystem::directory_iterator(i.path().string()))
+		{
+			CDib bmp;
+			bmp.Load(j.path().string());  //使用bmp读取图片函数
+			vector<double>t;
+			for (int i = 0; i < 28 * 28; i++)
+			{
+				t.push_back(double(*(bmp.m_pData + i)));  //将像素存入数组中
+			}
+			sample[id].push_back(t);
+			count++;
+			if (count == N) break;
+		}
+		id++;
+	}
+	return sample;
+}
+
+double Euclidean_Distance(const vector<double>& v1, const vector<double>& v2)
+{
+	if (v1.size() != v2.size()) throw"向量维数不匹配";
+	double sum = 0.0;
+	for (size_t i = 0; i < v1.size(); i++)
+	{
+		double diff = v1[i] - v2[i];
+		sum += diff * diff;
+	}
+	return sqrt(sum);
+}
+
+int KNN(vector<double>t, vector<vector<vector<double>>>sample, int K)
+{
+	vector<NUMBER>scores;
+	for (int i = 0; i < sample.size(); i++)
+	{
+		double similarity = 0;
+		for (int j = 0; j < sample[0].size(); j++)
+		{
+			similarity = Euclidean_Distance(sample[i][j], t);
+			scores.push_back({ similarity,i });
+		}
+	}
+	sort(scores.begin(), scores.end(), compareBySimilarity);
+	vector<int>count(10);
+	for (int i = 0; i < K; i++)
+	{
+		count[scores[i].category] += 1;
+	}
+
+	int maxIndex = 0;
+	for (int i = 1; i < count.size(); i++) {
+		if (count[i] > count[maxIndex]) maxIndex = i;
+	}
+	cout << "print 10 sample" << endl;
+	for (int i = 0; i < 10; i++) {
+		cout << "number:" << scores[i].category << "similarity:" << scores[i].similarity << endl;
+	}
+	cout << "predict:" << maxIndex << endl;
+	return maxIndex;
+}
+
+int main()
+{
+	vector<vector<vector<double>>> sample = dataset("");
+	vector<double>c;
+	CDib bmp;
+	bmp.Load("");
+	for (int i = 0; i < 768; i++)
+	{
+		c.push_back(double(*(bmp.m_pData + i)));
+	}
+	double v = KNN(c, sample, 50);
+	return 1;
+}
 
